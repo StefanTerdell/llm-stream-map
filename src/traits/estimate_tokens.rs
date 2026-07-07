@@ -1,0 +1,82 @@
+use crate::chat_completion::models::api::{
+    common::{
+        ChatCompletionMessage, ChatCompletionRequestMessageContent,
+        ChatCompletionRequestMessageContentPart,
+    },
+    request::common::CommonChatCompletionRequestBody,
+};
+
+pub trait EstimateTokens {
+    /// Tokenizer-free prompt estimate for fallback accounting when a
+    /// stream ends before usage arrives. Deliberately biased high.
+    fn estimate_tokens(&self) -> u32;
+}
+
+impl EstimateTokens for CommonChatCompletionRequestBody {
+    /// Tokenizer-free prompt estimate for fallback accounting when a stream ends
+    /// before `usage` arrives. Deliberately biased high. Constants are knobs —
+    /// calibrate them (see below).
+    fn estimate_tokens(&self) -> u32 {
+        const PRIMING_OVERHEAD: u32 = 3; // <|start|>assistant<|message|>
+
+        let mut total = PRIMING_OVERHEAD;
+
+        for msg in &self.messages {
+            total += msg.estimate_tokens()
+        }
+
+        total
+    }
+}
+
+impl EstimateTokens for str {
+    /// Byte-based, biased high. More stable than word-splitting across code, JSON,
+    /// URLs, and CJK. ~4 bytes/token is the English/ASCII average under o200k-style
+    /// BPE; a smaller divisor overestimates.
+    fn estimate_tokens(&self) -> u32 {
+        (self.len() as f64 / 3.5).ceil() as u32 // s.len() is UTF-8 byte length
+    }
+}
+
+impl EstimateTokens for ChatCompletionMessage {
+    fn estimate_tokens(&self) -> u32 {
+        // ChatML-ish per-message frame: <|im_start|>{role}\n … <|im_end|>\n
+        // Harmony (gpt-oss) is heavier with channel markers, so treat this as a floor.
+        const PER_MESSAGE_OVERHEAD: u32 = 4;
+        const IMAGE_TOKENS: u32 = 1200; // flat, when dimensions/detail unknown
+
+        let mut total = PER_MESSAGE_OVERHEAD;
+
+        if let Some(role) = &self.role {
+            total += role.estimate_tokens();
+        };
+
+        if let Some(name) = &self.name {
+            total += name.estimate_tokens() + 1;
+        }
+
+        match &self.content {
+            Some(ChatCompletionRequestMessageContent::Text(s)) => total += s.estimate_tokens(),
+            Some(ChatCompletionRequestMessageContent::Parts(parts)) => {
+                for part in parts {
+                    total += match part {
+                        ChatCompletionRequestMessageContentPart::Text { text, .. } => {
+                            text.estimate_tokens()
+                        }
+                        ChatCompletionRequestMessageContentPart::Other(_) => IMAGE_TOKENS, // audio/other modalities: their own flat constant
+                    };
+                }
+            }
+            None => {} // e.g. assistant turn that only carries tool_calls
+        }
+
+        // Tool calls cost tokens too: fn name + the arguments JSON string.
+        for call in self.tool_calls.iter().flatten() {
+            total += call.function.name.estimate_tokens()
+                + call.function.arguments.estimate_tokens()
+                + 4; // rough per-call structural framing
+        }
+
+        total
+    }
+}
