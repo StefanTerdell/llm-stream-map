@@ -3,6 +3,15 @@
 version = 4
 
 [[package]]
+name = "arrayvec"
+version = "0.7.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d3fb67a6e08acf24fdeccbac2cb6ac4305825bd1f117462e0e6f2f193345ad56"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "async-stream"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -708,8 +717,9 @@ checksum = "92daf443525c4cce67b150400bc2316076100ce0b3686209eb8cf3c31612e6f0"
 
 [[package]]
 name = "llm-stream-map"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
+ "arrayvec",
  "async-stream",
  "async-trait",
  "derive_aliases",
@@ -1166,6 +1176,7 @@ version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2b42f36aa1cd011945615b92222f6bf73c599a102a300334cd7f8dbeec726cc"
 dependencies = [
+ "arrayvec",
  "dyn-clone",
  "indexmap",
  "ref-cast",

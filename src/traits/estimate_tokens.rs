@@ -1,9 +1,10 @@
 use crate::chat_completion::models::api::{
-    common::{
-        ChatCompletionMessage, ChatCompletionRequestMessageContent,
-        ChatCompletionRequestMessageContentPart,
+    common::CommonChatCompletionMessage,
+    request::common::{
+        ChatCompletionRequestMessage, ChatCompletionRequestMessageContent,
+        ChatCompletionRequestMessageContentPart, CommonChatCompletionRequestBody,
     },
-    request::common::CommonChatCompletionRequestBody,
+    response::common::ChatCompletionResponseMessage,
 };
 
 pub trait EstimateTokens {
@@ -38,12 +39,11 @@ impl EstimateTokens for str {
     }
 }
 
-impl EstimateTokens for ChatCompletionMessage {
+impl EstimateTokens for CommonChatCompletionMessage {
     fn estimate_tokens(&self) -> u32 {
         // ChatML-ish per-message frame: <|im_start|>{role}\n … <|im_end|>\n
         // Harmony (gpt-oss) is heavier with channel markers, so treat this as a floor.
         const PER_MESSAGE_OVERHEAD: u32 = 4;
-        const IMAGE_TOKENS: u32 = 1200; // flat, when dimensions/detail unknown
 
         let mut total = PER_MESSAGE_OVERHEAD;
 
@@ -55,21 +55,6 @@ impl EstimateTokens for ChatCompletionMessage {
             total += name.estimate_tokens() + 1;
         }
 
-        match &self.content {
-            Some(ChatCompletionRequestMessageContent::Text(s)) => total += s.estimate_tokens(),
-            Some(ChatCompletionRequestMessageContent::Parts(parts)) => {
-                for part in parts {
-                    total += match part {
-                        ChatCompletionRequestMessageContentPart::Text { text, .. } => {
-                            text.estimate_tokens()
-                        }
-                        ChatCompletionRequestMessageContentPart::Other(_) => IMAGE_TOKENS, // audio/other modalities: their own flat constant
-                    };
-                }
-            }
-            None => {} // e.g. assistant turn that only carries tool_calls
-        }
-
         // Tool calls cost tokens too: fn name + the arguments JSON string.
         for call in self.tool_calls.iter().flatten() {
             total += call.function.name.estimate_tokens()
@@ -78,5 +63,39 @@ impl EstimateTokens for ChatCompletionMessage {
         }
 
         total
+    }
+}
+
+impl EstimateTokens for ChatCompletionResponseMessage {
+    fn estimate_tokens(&self) -> u32 {
+        self.common.estimate_tokens()
+            + self
+                .content
+                .as_ref()
+                .map(|c| c.estimate_tokens())
+                .unwrap_or_default()
+    }
+}
+
+impl EstimateTokens for ChatCompletionRequestMessage {
+    fn estimate_tokens(&self) -> u32 {
+        const IMAGE_TOKENS: u32 = 1200; // flat, when dimensions/detail unknown
+        let total = self.common.estimate_tokens();
+
+        match &self.content {
+            Some(ChatCompletionRequestMessageContent::Text(s)) => total + s.estimate_tokens(),
+            Some(ChatCompletionRequestMessageContent::Parts(parts)) => {
+                parts.into_iter().fold(total, |total, part| {
+                    total
+                        + match part {
+                            ChatCompletionRequestMessageContentPart::Text { text, .. } => {
+                                text.estimate_tokens()
+                            }
+                            ChatCompletionRequestMessageContentPart::Other(_) => IMAGE_TOKENS, // audio/other modalities: their own flat constant
+                        }
+                })
+            }
+            None => total, // e.g. assistant turn that only carries tool_calls
+        }
     }
 }

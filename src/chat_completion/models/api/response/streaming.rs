@@ -2,8 +2,8 @@ use indexmap::IndexMap;
 use serde_json::Value;
 
 use crate::chat_completion::models::api::{
-    common::{ChatCompletionMessage, ChatCompletionUsage},
-    response::common::CommonChatCompletionChoice,
+    common::ChatCompletionUsage,
+    response::common::{ChatCompletionResponseMessage, CommonChatCompletionChoice},
 };
 
 #[derive(..ApiModel)]
@@ -20,7 +20,7 @@ pub struct StreamingChatCompletionChunk {
 
 #[derive(..ApiModel)]
 pub struct StreamingChatCompletionChoice {
-    pub delta: ChatCompletionMessage,
+    pub delta: ChatCompletionResponseMessage,
     #[serde(flatten)]
     pub common: CommonChatCompletionChoice,
 }

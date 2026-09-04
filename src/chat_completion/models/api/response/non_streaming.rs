@@ -1,9 +1,15 @@
-use crate::chat_completion::models::{
-    api::{
-        common::{ChatCompletionMessage, ChatCompletionUsage},
-        response::{common::CommonChatCompletionChoice, streaming::StreamingChatCompletionChoice},
+use crate::{
+    chat_completion::models::{
+        api::{
+            common::ChatCompletionUsage,
+            response::{
+                common::{ChatCompletionResponseMessage, CommonChatCompletionChoice},
+                streaming::StreamingChatCompletionChoice,
+            },
+        },
+        lib::common::stats::ChatCompletionStats,
     },
-    lib::common::stats::ChatCompletionStats,
+    traits::remap_reasoning::Target,
 };
 
 use serde_json::Value;
@@ -29,9 +35,33 @@ pub struct NonStreamingChatCompletionResponseBody {
 
 #[derive(..ApiModel)]
 pub struct NonStreamingChatCompletionChoice {
-    pub message: ChatCompletionMessage,
+    pub message: ChatCompletionResponseMessage,
     #[serde(flatten)]
     pub common: CommonChatCompletionChoice,
+}
+
+impl Target for NonStreamingChatCompletionChoice {
+    type Inner = ChatCompletionResponseMessage;
+
+    fn index(&self) -> usize {
+        self.common.index as usize
+    }
+
+    fn inner_mut_opt(&mut self) -> Option<&mut Self::Inner> {
+        Some(&mut self.message)
+    }
+}
+
+impl Target for StreamingChatCompletionChoice {
+    type Inner = ChatCompletionResponseMessage;
+
+    fn index(&self) -> usize {
+        self.common.index as usize
+    }
+
+    fn inner_mut_opt(&mut self) -> Option<&mut Self::Inner> {
+        Some(&mut self.delta)
+    }
 }
 
 impl From<StreamingChatCompletionChoice> for NonStreamingChatCompletionChoice {

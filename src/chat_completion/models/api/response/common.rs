@@ -3,7 +3,43 @@ use std::ops::Add;
 use indexmap::IndexMap;
 use serde_json::Value;
 
-use crate::traits::or_merge::OrMerge;
+use crate::{
+    chat_completion::models::api::common::CommonChatCompletionMessage,
+    traits::{or_merge::OrMerge, remap_reasoning::InnerTarget},
+};
+
+#[derive(..ApiModel)]
+pub struct ChatCompletionResponseMessage {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content: Option<String>,
+    #[serde(flatten)]
+    pub common: CommonChatCompletionMessage,
+}
+
+impl InnerTarget for ChatCompletionResponseMessage {
+    fn content_mut(&mut self) -> &mut Option<String> {
+        &mut self.content
+    }
+
+    fn reasoning_content_mut(&mut self) -> &mut Option<String> {
+        &mut self.common.reasoning_content
+    }
+
+    fn reasoning_mut(&mut self) -> &mut Option<String> {
+        &mut self.common.reasoning
+    }
+}
+
+impl Add for ChatCompletionResponseMessage {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self {
+            content: self.content.or_merge(rhs.content),
+            common: self.common + rhs.common,
+        }
+    }
+}
 
 #[derive(..ApiModel)]
 pub struct CommonChatCompletionChoice {

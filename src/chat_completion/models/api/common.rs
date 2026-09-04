@@ -1,17 +1,14 @@
 use crate::{
-    chat_completion::models::lib::common::stats::ChatCompletionStats,
-    traits::{or_add::OrAdd, or_merge::OrMerge},
+    chat_completion::models::lib::common::stats::ChatCompletionStats, traits::or_merge::OrMerge,
 };
 
 use indexmap::IndexMap;
 use serde_json::Value;
-use std::{convert::Infallible, ops::Add, str::FromStr};
-use stefans_utils::literal_str;
+use std::ops::Add;
 
 #[derive(..ApiModel)]
-pub struct ChatCompletionMessage {
+pub struct CommonChatCompletionMessage {
     pub role: Option<String>,
-    pub content: Option<ChatCompletionRequestMessageContent>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_calls: Option<Vec<ChatCompletionRequestMessageToolCall>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -24,13 +21,12 @@ pub struct ChatCompletionMessage {
     pub additional_properties: IndexMap<String, Value>,
 }
 
-impl Add for ChatCompletionMessage {
+impl Add for CommonChatCompletionMessage {
     type Output = Self;
     fn add(self, rhs: Self) -> Self {
         Self {
             role: rhs.role.or(self.role),
             tool_calls: self.tool_calls.or_merge(rhs.tool_calls),
-            content: self.content.or_add(rhs.content),
             reasoning_content: self.reasoning_content.or_merge(rhs.reasoning_content),
             reasoning: self.reasoning.or_merge(rhs.reasoning),
             name: rhs.name.or(self.name),
@@ -56,88 +52,6 @@ pub struct ChatCompletionRequestMessageFunctionToolCall {
     pub arguments: String,
     #[serde(flatten)]
     pub additional_properties: IndexMap<String, Value>,
-}
-
-#[derive(..ApiModel)]
-#[serde(untagged)]
-pub enum ChatCompletionRequestMessageContent {
-    Text(String),
-    Parts(Vec<ChatCompletionRequestMessageContentPart>),
-}
-
-impl core::iter::Sum for ChatCompletionRequestMessageContent {
-    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
-        iter.fold(Self::Parts(vec![]), |p, c| p + c)
-    }
-}
-impl Add for ChatCompletionRequestMessageContent {
-    type Output = Self;
-    fn add(self, rhs: Self) -> Self::Output {
-        match self {
-            Self::Text(text) => match rhs {
-                Self::Text(rhs_text) => Self::Text(format!("{text}{rhs_text}")),
-                Self::Parts(mut vec) => {
-                    if vec.is_empty() {
-                        Self::Text(text)
-                    } else {
-                        vec.insert(0, text.into());
-                        Self::Parts(vec)
-                    }
-                }
-            },
-            Self::Parts(mut vec) => match rhs {
-                Self::Text(text) => {
-                    if vec.is_empty() {
-                        Self::Text(text)
-                    } else {
-                        vec.push(text.into());
-                        Self::Parts(vec)
-                    }
-                }
-                Self::Parts(mut rhs_vec) => {
-                    vec.append(&mut rhs_vec);
-                    Self::Parts(vec)
-                }
-            },
-        }
-    }
-}
-
-literal_str!(ChatCompletionRequestMessageContentPartTextType = "text");
-
-#[derive(..ApiModel)]
-#[serde(untagged)]
-pub enum ChatCompletionRequestMessageContentPart {
-    Text {
-        r#type: ChatCompletionRequestMessageContentPartTextType,
-        text: String,
-        #[serde(flatten)]
-        additional_properties: IndexMap<String, Value>,
-    },
-    #[serde(untagged)]
-    Other(Value),
-}
-
-impl From<String> for ChatCompletionRequestMessageContentPart {
-    fn from(value: String) -> Self {
-        Self::Text {
-            text: value,
-            r#type: Default::default(),
-            additional_properties: Default::default(),
-        }
-    }
-}
-
-impl FromStr for ChatCompletionRequestMessageContentPart {
-    type Err = Infallible;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self::Text {
-            r#type: Default::default(),
-            text: s.to_string(),
-            additional_properties: Default::default(),
-        })
-    }
 }
 
 #[derive(..ApiModel, Default)]
