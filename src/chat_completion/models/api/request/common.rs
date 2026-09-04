@@ -1,11 +1,9 @@
 use indexmap::IndexMap;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::chat_completion::models::api::common::ChatCompletionMessage;
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(..ApiModel)]
 pub struct CommonChatCompletionRequestBody {
     pub model: String,
     pub messages: Vec<ChatCompletionMessage>,

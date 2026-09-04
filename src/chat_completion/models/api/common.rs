@@ -4,13 +4,11 @@ use crate::{
 };
 
 use indexmap::IndexMap;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{convert::Infallible, ops::Add, str::FromStr};
 use stefans_utils::literal_str;
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(..ApiModel)]
 pub struct ChatCompletionMessage {
     pub role: Option<String>,
     pub content: Option<ChatCompletionRequestMessageContent>,
@@ -45,14 +43,14 @@ impl Add for ChatCompletionMessage {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(..ApiModel)]
 pub struct ChatCompletionRequestMessageToolCall {
     pub function: ChatCompletionRequestMessageFunctionToolCall,
     #[serde(flatten)]
     pub additional_properties: IndexMap<String, Value>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(..ApiModel)]
 pub struct ChatCompletionRequestMessageFunctionToolCall {
     pub name: String,
     pub arguments: String,
@@ -60,7 +58,7 @@ pub struct ChatCompletionRequestMessageFunctionToolCall {
     pub additional_properties: IndexMap<String, Value>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(..ApiModel)]
 #[serde(untagged)]
 pub enum ChatCompletionRequestMessageContent {
     Text(String),
@@ -107,7 +105,7 @@ impl Add for ChatCompletionRequestMessageContent {
 
 literal_str!(ChatCompletionRequestMessageContentPartTextType = "text");
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(..ApiModel)]
 #[serde(untagged)]
 pub enum ChatCompletionRequestMessageContentPart {
     Text {
@@ -142,7 +140,7 @@ impl FromStr for ChatCompletionRequestMessageContentPart {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
+#[derive(..ApiModel, Default)]
 pub struct ChatCompletionUsage {
     completion_tokens: u32,
     prompt_tokens: u32,

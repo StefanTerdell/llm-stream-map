@@ -6,8 +6,6 @@ use crate::chat_completion::models::{
     lib::common::stats::ChatCompletionStats,
 };
 
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::ops::Add;
 use stefans_utils::literal_str;
@@ -20,7 +18,7 @@ pub struct NonStreamingChatCompletionResponse {
 
 literal_str!(ChatCompletionObjectLabel = "chat.completion");
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(..ApiModel)]
 pub struct NonStreamingChatCompletionResponseBody {
     pub object: ChatCompletionObjectLabel,
     pub model: String,
@@ -28,7 +26,7 @@ pub struct NonStreamingChatCompletionResponseBody {
     pub usage: ChatCompletionUsage,
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(..ApiModel)]
 pub struct NonStreamingChatCompletionChoice {
     pub message: ChatCompletionMessage,
     #[serde(flatten)]

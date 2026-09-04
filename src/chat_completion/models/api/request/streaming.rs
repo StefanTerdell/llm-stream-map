@@ -1,6 +1,4 @@
 use indexmap::IndexMap;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use stefans_utils::literals::True;
 
@@ -9,7 +7,7 @@ use crate::chat_completion::models::api::request::{
     non_streaming::NonStreamingChatCompletionRequestBody,
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(..ApiModel)]
 pub struct StreamingChatCompletionRequestBody {
     pub stream: True,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -33,7 +31,7 @@ impl From<StreamingChatCompletionRequestBody> for ChatCompletionRequestBody {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(..ApiModel)]
 pub struct StreamingChatCompletionRequestBodyStreamOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub include_usage: Option<bool>,

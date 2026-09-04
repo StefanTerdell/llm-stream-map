@@ -1,11 +1,12 @@
 [package]
 name = "llm-stream-map"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 
 [dependencies]
 async-stream = "0.3.6"
 async-trait = "0.1.89"
+derive_aliases = "0.4.7"
 either = { version = "1.16.0", features = ["serde"] }
 indexmap = { version = "2.14.0", features = ["serde"] }
 itertools = "0.15.0"

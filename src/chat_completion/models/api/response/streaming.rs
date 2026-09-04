@@ -1,6 +1,4 @@
 use indexmap::IndexMap;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::chat_completion::models::api::{
@@ -8,7 +6,7 @@ use crate::chat_completion::models::api::{
     response::common::CommonChatCompletionChoice,
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(..ApiModel)]
 pub struct StreamingChatCompletionChunk {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<Value>,
@@ -20,21 +18,21 @@ pub struct StreamingChatCompletionChunk {
     pub additional_properties: IndexMap<String, Value>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(..ApiModel)]
 pub struct StreamingChatCompletionChoice {
     pub delta: ChatCompletionMessage,
     #[serde(flatten)]
     pub common: CommonChatCompletionChoice,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(..ApiModel)]
 pub struct StreamingChatCompletionToolCall {
     pub function: StreamingChatCompletionResponseFunctionToolCall,
     #[serde(flatten)]
     pub additional_properties: IndexMap<String, Value>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(..ApiModel)]
 pub struct StreamingChatCompletionResponseFunctionToolCall {
     pub name: String,
     pub arguments: String,

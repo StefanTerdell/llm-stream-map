@@ -1,5 +1,3 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use stefans_utils::literals::{False, True};
 
 use crate::chat_completion::models::api::request::{
@@ -7,7 +5,7 @@ use crate::chat_completion::models::api::request::{
     streaming::StreamingChatCompletionRequestBody,
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(..ApiModel)]
 pub struct NonStreamingChatCompletionRequestBody {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stream: Option<False>,
