@@ -5,7 +5,8 @@ use crate::chat_completion::models::api::common::ChatCompletionMessage;
 
 #[derive(..ApiModel)]
 pub struct CommonChatCompletionRequestBody {
-    pub model: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
     pub messages: Vec<ChatCompletionMessage>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub logprobs: Option<bool>,

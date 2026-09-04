@@ -21,7 +21,8 @@ literal_str!(ChatCompletionObjectLabel = "chat.completion");
 #[derive(..ApiModel)]
 pub struct NonStreamingChatCompletionResponseBody {
     pub object: ChatCompletionObjectLabel,
-    pub model: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
     pub choices: Vec<NonStreamingChatCompletionChoice>,
     pub usage: ChatCompletionUsage,
 }
