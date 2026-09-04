@@ -9,7 +9,7 @@ use crate::{
         },
         lib::common::stats::ChatCompletionStats,
     },
-    traits::remap_reasoning::Target,
+    traits::reasoning_content_remapping::ReasoningContentRemappingTarget,
 };
 
 use serde_json::Value;
@@ -40,7 +40,7 @@ pub struct NonStreamingChatCompletionChoice {
     pub common: CommonChatCompletionChoice,
 }
 
-impl Target for NonStreamingChatCompletionChoice {
+impl ReasoningContentRemappingTarget for NonStreamingChatCompletionChoice {
     type Inner = ChatCompletionResponseMessage;
 
     fn index(&self) -> usize {
@@ -52,7 +52,7 @@ impl Target for NonStreamingChatCompletionChoice {
     }
 }
 
-impl Target for StreamingChatCompletionChoice {
+impl ReasoningContentRemappingTarget for StreamingChatCompletionChoice {
     type Inner = ChatCompletionResponseMessage;
 
     fn index(&self) -> usize {

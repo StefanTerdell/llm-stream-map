@@ -1,10 +1,32 @@
 use arrayvec::ArrayString;
 use indexmap::IndexMap;
 
-use crate::traits::remap_reasoning::{InnerTarget, Target};
+use crate::traits::reasoning_content_remapping::{
+    ReasoningContentRemappingInnerTarget, ReasoningContentRemappingTarget,
+};
 
 #[derive(..ApiModel, Copy, Hash)]
-pub enum ReasoningPosition {
+pub struct ReasoningContentRemappingConfig {
+    pub from: ReasoningContentPosition,
+    pub to: ReasoningContentPosition,
+}
+
+impl ReasoningContentRemappingConfig {
+    pub fn into_state(self) -> ReasoningContentRemappingState {
+        ReasoningContentRemappingState::new(self)
+    }
+}
+
+impl From<(ReasoningContentPosition, ReasoningContentPosition)>
+    for ReasoningContentRemappingConfig
+{
+    fn from((from, to): (ReasoningContentPosition, ReasoningContentPosition)) -> Self {
+        Self { from, to }
+    }
+}
+
+#[derive(..ApiModel, Copy, Hash)]
+pub enum ReasoningContentPosition {
     Content {
         start_tag: ArrayString<32>,
         stop_tag: ArrayString<32>,
@@ -13,7 +35,7 @@ pub enum ReasoningPosition {
     Reasoning,
 }
 
-impl ReasoningPosition {
+impl ReasoningContentPosition {
     pub fn content(
         start_tag: impl AsRef<str>,
         stop_tag: impl AsRef<str>,
@@ -31,21 +53,9 @@ impl ReasoningPosition {
     }
 }
 
-#[derive(..ApiModel, Copy, Hash)]
-pub struct RemapReasoning {
-    pub from: ReasoningPosition,
-    pub to: ReasoningPosition,
-}
-
-impl From<(ReasoningPosition, ReasoningPosition)> for RemapReasoning {
-    fn from((from, to): (ReasoningPosition, ReasoningPosition)) -> Self {
-        Self { from, to }
-    }
-}
-
-pub struct RemapReasoningState {
-    from: ReasoningPosition,
-    to: ReasoningPosition,
+pub struct ReasoningContentRemappingState {
+    from: ReasoningContentPosition,
+    to: ReasoningContentPosition,
     choices: IndexMap<usize, ChoiceState>,
 }
 
@@ -56,12 +66,9 @@ struct ChoiceState {
     partial: Option<String>,
 }
 
-impl RemapReasoningState {
-    pub fn from_inference_option(option: RemapReasoning) -> Self {
-        Self::new(option.from, option.to)
-    }
-
-    pub fn new(from: ReasoningPosition, to: ReasoningPosition) -> Self {
+impl ReasoningContentRemappingState {
+    pub fn new(positions: impl Into<ReasoningContentRemappingConfig>) -> Self {
+        let ReasoningContentRemappingConfig { from, to } = positions.into();
         Self {
             from,
             to,
@@ -69,7 +76,7 @@ impl RemapReasoningState {
         }
     }
 
-    pub fn apply<T: Target>(&mut self, target: &mut T) {
+    pub fn apply<T: ReasoningContentRemappingTarget>(&mut self, target: &mut T) {
         let index = target.index();
 
         let Some(inner) = target.inner_mut_opt() else {
@@ -86,7 +93,7 @@ impl RemapReasoningState {
         match (state.started, state.stopped) {
             // not started, not stopped
             (false, false) => match &self.from {
-                ReasoningPosition::Content {
+                ReasoningContentPosition::Content {
                     start_tag,
                     stop_tag,
                 } => {
@@ -132,18 +139,18 @@ impl RemapReasoningState {
                         }
                     }
                 }
-                ReasoningPosition::Reasoning => {
+                ReasoningContentPosition::Reasoning => {
                     reasoning_content_opt = inner.reasoning_mut().take();
                     state.started = reasoning_content_opt.is_some();
                 }
-                ReasoningPosition::ReasoningContent => {
+                ReasoningContentPosition::ReasoningContent => {
                     reasoning_content_opt = inner.reasoning_content_mut().take();
                     state.started = reasoning_content_opt.is_some();
                 }
             },
             // started, not stopped
             (true, false) => match &self.from {
-                ReasoningPosition::Content {
+                ReasoningContentPosition::Content {
                     start_tag: _,
                     stop_tag,
                 } => {
@@ -173,11 +180,11 @@ impl RemapReasoningState {
                         reasoning_content_opt = Some(std::mem::take(content));
                     }
                 }
-                ReasoningPosition::Reasoning => {
+                ReasoningContentPosition::Reasoning => {
                     reasoning_content_opt = inner.reasoning_mut().take();
                     state.stopped = reasoning_content_opt.is_none();
                 }
-                ReasoningPosition::ReasoningContent => {
+                ReasoningContentPosition::ReasoningContent => {
                     reasoning_content_opt = inner.reasoning_content_mut().take();
                     state.stopped = reasoning_content_opt.is_none();
                 }
@@ -193,7 +200,7 @@ impl RemapReasoningState {
         }
 
         match &self.to {
-            ReasoningPosition::Content {
+            ReasoningContentPosition::Content {
                 start_tag,
                 stop_tag,
             } => {
@@ -224,12 +231,12 @@ impl RemapReasoningState {
                     }
                 }
             }
-            ReasoningPosition::Reasoning => {
+            ReasoningContentPosition::Reasoning => {
                 if reasoning_content_opt.is_some() {
                     *inner.reasoning_mut() = reasoning_content_opt;
                 }
             }
-            ReasoningPosition::ReasoningContent => {
+            ReasoningContentPosition::ReasoningContent => {
                 if reasoning_content_opt.is_some() {
                     *inner.reasoning_content_mut() = reasoning_content_opt;
                 }
@@ -246,10 +253,10 @@ mod tests {
     #[test]
     fn should_be_able_to_map_between_tags() {
         let mut input = Dummy::from_content("--<herp>123</derp>asdfg");
-        let mut state = RemapReasoningState::new(
-            ReasoningPosition::content_unchecked("<herp>", "</derp>"),
-            ReasoningPosition::content_unchecked("FOO", "BAR"),
-        );
+        let mut state = ReasoningContentRemappingState::new((
+            ReasoningContentPosition::content_unchecked("<herp>", "</derp>"),
+            ReasoningContentPosition::content_unchecked("FOO", "BAR"),
+        ));
 
         state.apply(&mut input);
 
@@ -266,10 +273,10 @@ mod tests {
             Dummy::from_content("fg"),
         ];
 
-        let mut state = RemapReasoningState::new(
-            ReasoningPosition::content_unchecked("<herp>", "</derp>"),
-            ReasoningPosition::ReasoningContent,
-        );
+        let mut state = ReasoningContentRemappingState::new((
+            ReasoningContentPosition::content_unchecked("<herp>", "</derp>"),
+            ReasoningContentPosition::ReasoningContent,
+        ));
 
         for chunk in input.iter_mut() {
             state.apply(chunk);
@@ -284,10 +291,10 @@ mod tests {
     #[test]
     fn should_map_content_tags_to_reasoning_field() {
         let mut input = Dummy::from_content("before<think>my reasoning</think>after");
-        let mut state = RemapReasoningState::new(
-            ReasoningPosition::content_unchecked("<think>", "</think>"),
-            ReasoningPosition::Reasoning,
-        );
+        let mut state = ReasoningContentRemappingState::new((
+            ReasoningContentPosition::content_unchecked("<think>", "</think>"),
+            ReasoningContentPosition::Reasoning,
+        ));
 
         state.apply(&mut input);
 
@@ -306,10 +313,10 @@ mod tests {
             Dummy::from_content("after"), // reasoning is None → triggers stop
         ];
 
-        let mut state = RemapReasoningState::new(
-            ReasoningPosition::Reasoning,
-            ReasoningPosition::content_unchecked("[THINK]", "[/THINK]"),
-        );
+        let mut state = ReasoningContentRemappingState::new((
+            ReasoningContentPosition::Reasoning,
+            ReasoningContentPosition::content_unchecked("[THINK]", "[/THINK]"),
+        ));
 
         for chunk in chunks.iter_mut() {
             state.apply(chunk);
@@ -324,10 +331,10 @@ mod tests {
     #[test]
     fn should_map_reasoning_content_to_reasoning() {
         let mut input = Dummy::from_reasoning_content("extracted thought");
-        let mut state = RemapReasoningState::new(
-            ReasoningPosition::ReasoningContent,
-            ReasoningPosition::Reasoning,
-        );
+        let mut state = ReasoningContentRemappingState::new((
+            ReasoningContentPosition::ReasoningContent,
+            ReasoningContentPosition::Reasoning,
+        ));
 
         state.apply(&mut input);
 
@@ -344,10 +351,10 @@ mod tests {
             Dummy::from_content("world"),
         ];
 
-        let mut state = RemapReasoningState::new(
-            ReasoningPosition::Reasoning,
-            ReasoningPosition::content_unchecked("<r>", "</r>"),
-        );
+        let mut state = ReasoningContentRemappingState::new((
+            ReasoningContentPosition::Reasoning,
+            ReasoningContentPosition::content_unchecked("<r>", "</r>"),
+        ));
 
         for chunk in chunks.iter_mut() {
             state.apply(chunk);
@@ -361,10 +368,10 @@ mod tests {
 
     #[test]
     fn should_handle_any_index() {
-        let mut state = RemapReasoningState::new(
-            ReasoningPosition::content_unchecked("<t>", "</t>"),
-            ReasoningPosition::ReasoningContent,
-        );
+        let mut state = ReasoningContentRemappingState::new((
+            ReasoningContentPosition::content_unchecked("<t>", "</t>"),
+            ReasoningContentPosition::ReasoningContent,
+        ));
 
         for index in [0, 10, 100, 1000] {
             let mut input = Dummy::from_content("<t>ok</t>").with_index(index);
@@ -382,10 +389,10 @@ mod tests {
             Dummy::from_content("nk>ssage"),
         ];
 
-        let mut state = RemapReasoningState::new(
-            ReasoningPosition::content_unchecked("<think>", "</think>"),
-            ReasoningPosition::ReasoningContent,
-        );
+        let mut state = ReasoningContentRemappingState::new((
+            ReasoningContentPosition::content_unchecked("<think>", "</think>"),
+            ReasoningContentPosition::ReasoningContent,
+        ));
 
         for chunk in chunks.iter_mut() {
             state.apply(chunk);
@@ -398,7 +405,7 @@ mod tests {
     }
 
     mod dummy {
-        use crate::traits::remap_reasoning::InnerTarget;
+        use crate::traits::reasoning_content_remapping::ReasoningContentRemappingInnerTarget;
 
         use super::*;
 
@@ -481,7 +488,7 @@ mod tests {
             }
         }
 
-        impl InnerTarget for Dummy {
+        impl ReasoningContentRemappingInnerTarget for Dummy {
             fn content_mut(&mut self) -> &mut Option<String> {
                 &mut self.content
             }
@@ -495,7 +502,7 @@ mod tests {
             }
         }
 
-        impl Target for Dummy {
+        impl ReasoningContentRemappingTarget for Dummy {
             type Inner = Dummy;
 
             fn index(&self) -> usize {

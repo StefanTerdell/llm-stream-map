@@ -3,12 +3,12 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::chat_completion::models::api::common::ChatCompletionUsage;
+use crate::{chat_completion::models::api::common::ChatCompletionUsage, traits::or_add::OrAdd};
 
 #[derive(Debug, Clone)]
 pub struct ChatCompletionStats {
     pub requested: Instant,
-    pub chunks: Vec<ChatCompletionStatsChunk>,
+    pub chunks: Vec<ChatCompletionChunkStats>,
     pub input_tokens_is_estimate: bool,
     pub input_tokens: u32,
     pub output_tokens_is_estimate: bool,
@@ -22,7 +22,7 @@ impl ChatCompletionStats {
     }
 
     pub fn latency(&self) -> Option<Duration> {
-        self.chunks.first().map(|x| x.offset)
+        self.chunks.first().map(|x| x.duration)
     }
 
     pub fn tps_avg(&self) -> Option<f32> {
@@ -32,7 +32,7 @@ impl ChatCompletionStats {
             Some(
                 self.chunks
                     .iter()
-                    .fold(ChatCompletionStatsChunk::default(), |p, c| p + *c)
+                    .fold(ChatCompletionChunkStats::default(), |p, c| p + *c)
                     .tps(),
             )
         }
@@ -40,14 +40,15 @@ impl ChatCompletionStats {
 }
 
 #[derive(Debug, Clone, Copy, Default)]
-pub struct ChatCompletionStatsChunk {
-    pub offset: Duration,
+pub struct ChatCompletionChunkStats {
+    pub duration: Duration,
     pub tokens: u32,
+    pub tps_correction_duration: Option<Duration>,
 }
 
-impl ChatCompletionStatsChunk {
+impl ChatCompletionChunkStats {
     pub fn tps(&self) -> f32 {
-        let secs = self.offset.as_secs_f32();
+        let secs = self.duration.as_secs_f32();
 
         if secs == 0.0 {
             secs
@@ -57,13 +58,16 @@ impl ChatCompletionStatsChunk {
     }
 }
 
-impl Add for ChatCompletionStatsChunk {
+impl Add for ChatCompletionChunkStats {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
         Self {
-            offset: self.offset + rhs.offset,
+            duration: self.duration + rhs.duration,
             tokens: self.tokens + rhs.tokens,
+            tps_correction_duration: self
+                .tps_correction_duration
+                .or_add(rhs.tps_correction_duration),
         }
     }
 }

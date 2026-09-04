@@ -1,10 +1,10 @@
 use reqwest::Client;
 use std::{fmt::Display, sync::Arc};
 use stefans_utils::{as_arc::AsArc, prelude::AsClone, secret::Secret};
-pub mod remap_reasoning;
+pub mod reasoning_content_remapping;
 
 use crate::{
-    chat_completion::models::lib::options::remap_reasoning::RemapReasoning,
+    chat_completion::models::lib::options::reasoning_content_remapping::ReasoningContentRemappingConfig,
     traits::tps_throttler::TpsThrottler,
 };
 
@@ -13,7 +13,7 @@ pub struct ChatCompletionOptions {
     pub client: Option<Client>,
     pub bearer_token: Option<Secret<String>>,
     pub tps_throttler: Option<Arc<dyn TpsThrottler>>,
-    pub remap_reasoning: Option<RemapReasoning>,
+    pub reasoning_content_remapping: Option<ReasoningContentRemappingConfig>,
 }
 
 impl ChatCompletionOptions {
@@ -50,13 +50,16 @@ impl ChatCompletionOptions {
         self
     }
 
-    pub fn with_remap_reasoning(mut self, remap_reasoning: impl Into<RemapReasoning>) -> Self {
-        self.remap_reasoning = Some(remap_reasoning.into());
+    pub fn with_remap_reasoning(
+        mut self,
+        remap_reasoning: impl Into<ReasoningContentRemappingConfig>,
+    ) -> Self {
+        self.reasoning_content_remapping = Some(remap_reasoning.into());
         self
     }
 
     pub fn without_remap_reasoning(mut self) -> Self {
-        self.remap_reasoning = None;
+        self.reasoning_content_remapping = None;
         self
     }
 }

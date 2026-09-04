@@ -5,7 +5,9 @@ use serde_json::Value;
 
 use crate::{
     chat_completion::models::api::common::CommonChatCompletionMessage,
-    traits::{or_merge::OrMerge, remap_reasoning::InnerTarget},
+    traits::{
+        or_merge::OrMerge, reasoning_content_remapping::ReasoningContentRemappingInnerTarget,
+    },
 };
 
 #[derive(..ApiModel)]
@@ -16,7 +18,7 @@ pub struct ChatCompletionResponseMessage {
     pub common: CommonChatCompletionMessage,
 }
 
-impl InnerTarget for ChatCompletionResponseMessage {
+impl ReasoningContentRemappingInnerTarget for ChatCompletionResponseMessage {
     fn content_mut(&mut self) -> &mut Option<String> {
         &mut self.content
     }
