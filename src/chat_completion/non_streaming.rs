@@ -10,10 +10,8 @@ use crate::{
                 },
             },
             lib::{
-                options::ChatCompletionOptions,
-                streaming::{
-                    response::StreamingChatCompletionEvent, stats::StreamingChatCompletionStats,
-                },
+                common::stats::ChatCompletionStats, options::ChatCompletionOptions,
+                streaming::response::StreamingChatCompletionEvent,
             },
         },
         streaming::streaming_chat_completion,
@@ -23,12 +21,14 @@ use crate::{
 };
 
 use itertools::Itertools;
+use reqwest::IntoUrl;
 use serde_json::Value;
 use std::collections::HashMap;
 use stefans_utils::prelude::MapInto;
 use tokio_stream::StreamExt;
 
 pub async fn non_streaming_chat_completion(
+    url: impl IntoUrl,
     body: impl Into<NonStreamingChatCompletionRequestBody>,
     options: impl Into<Option<ChatCompletionOptions>>,
 ) -> Result<NonStreamingChatCompletionResponse, Error> {
@@ -36,13 +36,13 @@ pub async fn non_streaming_chat_completion(
     let model = body.common.model.clone();
     let prompt_tokens_estimate = body.common.estimate_tokens();
 
-    let mut stream = streaming_chat_completion(body, options).await?;
+    let mut stream = streaming_chat_completion(url, body, options).await?;
 
     #[derive(Default)]
     struct Acc {
         choices: HashMap<u32, NonStreamingChatCompletionChoice>,
         usage: Option<ChatCompletionUsage>,
-        stats: Option<StreamingChatCompletionStats>,
+        stats: Option<ChatCompletionStats>,
         error: Option<Value>,
     }
 

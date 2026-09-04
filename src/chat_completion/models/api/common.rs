@@ -1,5 +1,5 @@
 use crate::{
-    chat_completion::models::lib::streaming::stats::StreamingChatCompletionStats,
+    chat_completion::models::lib::common::stats::ChatCompletionStats,
     traits::{or_add::OrAdd, or_merge::OrMerge},
 };
 
@@ -10,7 +10,7 @@ use serde_json::Value;
 use std::{convert::Infallible, ops::Add, str::FromStr};
 use stefans_utils::literal_str;
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ChatCompletionMessage {
     pub role: Option<String>,
     pub content: Option<ChatCompletionRequestMessageContent>,
@@ -45,14 +45,14 @@ impl Add for ChatCompletionMessage {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ChatCompletionRequestMessageToolCall {
     pub function: ChatCompletionRequestMessageFunctionToolCall,
     #[serde(flatten)]
     pub additional_properties: IndexMap<String, Value>,
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ChatCompletionRequestMessageFunctionToolCall {
     pub name: String,
     pub arguments: String,
@@ -60,7 +60,7 @@ pub struct ChatCompletionRequestMessageFunctionToolCall {
     pub additional_properties: IndexMap<String, Value>,
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(untagged)]
 pub enum ChatCompletionRequestMessageContent {
     Text(String),
@@ -107,7 +107,7 @@ impl Add for ChatCompletionRequestMessageContent {
 
 literal_str!(ChatCompletionRequestMessageContentPartTextType = "text");
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(untagged)]
 pub enum ChatCompletionRequestMessageContentPart {
     Text {
@@ -151,8 +151,8 @@ pub struct ChatCompletionUsage {
     additional_properties: IndexMap<String, Value>,
 }
 
-impl From<&StreamingChatCompletionStats> for ChatCompletionUsage {
-    fn from(value: &StreamingChatCompletionStats) -> Self {
+impl From<&ChatCompletionStats> for ChatCompletionUsage {
+    fn from(value: &ChatCompletionStats) -> Self {
         Self {
             completion_tokens: value.output_tokens,
             prompt_tokens: value.input_tokens,

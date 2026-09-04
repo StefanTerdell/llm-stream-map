@@ -3,6 +3,7 @@ pub use reqwest_sse::error::{
     EventError as ReqwestSseEventError, EventSourceError as ReqwestSseEventSourceError,
 };
 pub use serde_json::Error as SerdeJsonError;
+pub use url::ParseError as UrlParseError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -14,4 +15,6 @@ pub enum Error {
     ReqwestSseReqwestSseEventSource(#[from] ReqwestSseEventSourceError),
     #[error(transparent)]
     ReqwestSseReqwestSseSource(#[from] ReqwestSseEventError),
+    #[error(transparent)]
+    UrlParse(#[from] UrlParseError),
 }

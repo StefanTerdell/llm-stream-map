@@ -1,12 +1,14 @@
-use reqwest::{Client, IntoUrl, Url};
-use std::fmt::Display;
-use stefans_utils::{prelude::AsClone, secret::Secret};
+use reqwest::Client;
+use std::{fmt::Display, sync::Arc};
+use stefans_utils::{as_arc::AsArc, prelude::AsClone, secret::Secret};
+
+use crate::traits::tps_throttler::TpsThrottler;
 
 #[derive(Default)]
 pub struct ChatCompletionOptions {
     pub client: Option<Client>,
-    pub url: Option<Url>,
     pub bearer_token: Option<Secret<String>>,
+    pub tps_throttler: Option<Arc<dyn TpsThrottler>>,
 }
 
 impl ChatCompletionOptions {
@@ -20,23 +22,6 @@ impl ChatCompletionOptions {
         self
     }
 
-    pub fn with_url(mut self, url: impl IntoUrl) -> Self {
-        self.url = Some(url.into_url().unwrap());
-        self
-    }
-
-    pub fn with_base_url(mut self, base_url: impl IntoUrl) -> Self {
-        let mut url = base_url.into_url().unwrap();
-        url.set_path("v1/chat/completions");
-        self.url = Some(url);
-        self
-    }
-
-    pub fn with_default_url(mut self) -> Self {
-        self.url = None;
-        self
-    }
-
     pub fn with_bearer_token<T: Display>(mut self, bearer_token: impl Into<Secret<T>>) -> Self {
         self.bearer_token = Some(bearer_token.into().expose_to_string().into());
         self
@@ -44,6 +29,19 @@ impl ChatCompletionOptions {
 
     pub fn without_bearer_token(mut self) -> Self {
         self.bearer_token = None;
+        self
+    }
+
+    pub fn with_tps_throttler<T: TpsThrottler + 'static>(
+        mut self,
+        tps_throttler: impl AsArc<T>,
+    ) -> Self {
+        self.tps_throttler = Some(tps_throttler.as_arc());
+        self
+    }
+
+    pub fn without_tps_throttler(mut self) -> Self {
+        self.tps_throttler = None;
         self
     }
 }

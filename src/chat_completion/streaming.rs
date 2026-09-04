@@ -7,43 +7,36 @@ use crate::{
             response::streaming::StreamingChatCompletionChunk,
         },
         lib::{
+            common::stats::{ChatCompletionStats, ChatCompletionStatsChunk},
             options::ChatCompletionOptions,
-            streaming::{
-                response::{StreamingChatCompletionEvent, StreamingChatCompletionResponse},
-                stats::{StreamingChatCompletionStats, StreamingChatCompletionStatsChunk},
-            },
+            streaming::response::{StreamingChatCompletionEvent, StreamingChatCompletionResponse},
         },
     },
     error::Error,
-    traits::estimate_tokens::EstimateTokens,
+    traits::{estimate_tokens::EstimateTokens, tps_throttler::TpsThrottler},
 };
 
 use async_stream::try_stream;
+use reqwest::IntoUrl;
 use reqwest_sse::{Event, EventSource};
 use std::time::Instant;
 use stefans_utils::prelude::AsBool;
 use tokio_stream::StreamExt;
 
 pub async fn streaming_chat_completion(
+    url: impl IntoUrl,
     body: impl Into<StreamingChatCompletionRequestBody>,
     options: impl Into<Option<ChatCompletionOptions>>,
 ) -> Result<StreamingChatCompletionResponse, Error> {
     let mut body = body.into();
 
-    let (client, url, bearer_token) = {
-        let options_opt = options.into();
-        let (client_opt, url_opt, bearer_token) = match options_opt {
-            Some(options) => (options.client, options.url, options.bearer_token),
-            None => (None, None, None),
-        };
-        let client = client_opt.unwrap_or_default();
-        let url = url_opt.unwrap_or(
-            "https://api.openai.com/v1/chat/completions"
-                .parse()
-                .unwrap(),
-        );
-
-        (client, url, bearer_token)
+    let (client, bearer_token, tps_throttler) = match options.into() {
+        Some(options) => (
+            options.client.unwrap_or_default(),
+            options.bearer_token,
+            options.tps_throttler,
+        ),
+        None => (Default::default(), None, None),
     };
 
     let requested_logprobs = body.common.logprobs.as_bool();
@@ -72,7 +65,7 @@ pub async fn streaming_chat_completion(
         request = request.bearer_auth(secret.expose())
     };
 
-    let mut stats = StreamingChatCompletionStats {
+    let mut stats = ChatCompletionStats {
         requested: Instant::now(),
         chunks: Default::default(),
         input_tokens_is_estimate: true,
@@ -85,6 +78,7 @@ pub async fn streaming_chat_completion(
     let mut last_received = stats.requested;
     let mut stream = request.send().await?.events().await?;
     let mut partial_buffer = None;
+    let throttle_key = tps_throttler.get_key().await;
 
     Ok(Box::pin(try_stream! {
         while let Some(Event { mut data, .. }) = stream.next().await.transpose()? {
@@ -127,8 +121,16 @@ pub async fn streaming_chat_completion(
                     }
                 }
 
+                let stats_chunk = ChatCompletionStatsChunk { offset, tokens };
+
+                if let Some(key) = throttle_key.as_ref()
+                    && let Some(max_tps) = tps_throttler.get_max_tps(key).await
+                    && let tps = stats_chunk.tps()
+                    && tps > max_tps {
+                }
+
                 stats.chunks
-                    .push(StreamingChatCompletionStatsChunk { offset, tokens })
+                    .push(stats_chunk)
             }
 
             if let Some(usage) = chunk.usage.take() {

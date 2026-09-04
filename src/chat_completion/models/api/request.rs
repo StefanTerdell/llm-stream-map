@@ -10,7 +10,7 @@ use crate::chat_completion::models::api::request::{
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(untagged)]
 pub enum ChatCompletionRequestBody {
     NonStreaming(NonStreamingChatCompletionRequestBody),

@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 async-stream = "0.3.6"
+async-trait = "0.1.89"
 either = { version = "1.16.0", features = ["serde"] }
 indexmap = { version = "2.14.0", features = ["serde"] }
 itertools = "0.15.0"
@@ -17,3 +18,4 @@ stefans-utils = { version = "0.12.0", features = ["secret-serialize-redacted"] }
 thiserror = "2.0.18"
 tokio = { version = "1.52.3", features = ["full"] }
 tokio-stream = { version = "0.1.18", features = ["full"] }
+url = { version = "2" }

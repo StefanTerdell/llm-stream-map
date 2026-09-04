@@ -1,7 +1,7 @@
 use crate::{
     chat_completion::models::{
         api::response::streaming::StreamingChatCompletionChunk,
-        lib::streaming::stats::StreamingChatCompletionStats,
+        lib::common::stats::ChatCompletionStats,
     },
     error::Error,
 };
@@ -11,13 +11,13 @@ use tokio_stream::Stream;
 
 pub enum StreamingChatCompletionEvent {
     Done {
-        stats: StreamingChatCompletionStats,
+        stats: ChatCompletionStats,
     },
     Chunk {
         chunk: StreamingChatCompletionChunk,
     },
     ChunkError {
-        stats: StreamingChatCompletionStats,
+        stats: ChatCompletionStats,
         chunk: StreamingChatCompletionChunk,
     },
 }

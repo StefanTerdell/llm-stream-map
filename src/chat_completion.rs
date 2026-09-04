@@ -13,18 +13,20 @@ use crate::{
 pub mod models;
 pub mod non_streaming;
 pub mod streaming;
+pub use reqwest::IntoUrl;
 
 pub async fn chat_completion(
+    url: impl IntoUrl,
     body: impl Into<ChatCompletionRequestBody>,
     options: impl Into<Option<ChatCompletionOptions>>,
 ) -> Result<ChatCompletionResponse, Error> {
     match body.into() {
         ChatCompletionRequestBody::NonStreaming(body) => {
-            non_streaming_chat_completion(body, options)
+            non_streaming_chat_completion(url, body, options)
                 .await
                 .map(ChatCompletionResponse::NonStreaming)
         }
-        ChatCompletionRequestBody::Streaming(body) => streaming_chat_completion(body, options)
+        ChatCompletionRequestBody::Streaming(body) => streaming_chat_completion(url, body, options)
             .await
             .map(ChatCompletionResponse::Streaming),
     }

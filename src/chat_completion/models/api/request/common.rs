@@ -5,7 +5,7 @@ use serde_json::Value;
 
 use crate::chat_completion::models::api::common::ChatCompletionMessage;
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CommonChatCompletionRequestBody {
     pub model: String,
     pub messages: Vec<ChatCompletionMessage>,

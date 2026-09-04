@@ -3,7 +3,7 @@ use crate::chat_completion::models::{
         common::{ChatCompletionMessage, ChatCompletionUsage},
         response::{common::CommonChatCompletionChoice, streaming::StreamingChatCompletionChoice},
     },
-    lib::streaming::stats::StreamingChatCompletionStats,
+    lib::common::stats::ChatCompletionStats,
 };
 
 use schemars::JsonSchema;
@@ -14,12 +14,13 @@ use stefans_utils::literal_str;
 
 pub struct NonStreamingChatCompletionResponse {
     pub body: NonStreamingChatCompletionResponseBody,
-    pub stats: Option<StreamingChatCompletionStats>,
+    pub stats: Option<ChatCompletionStats>,
     pub error: Option<Value>,
 }
 
 literal_str!(ChatCompletionObjectLabel = "chat.completion");
 
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct NonStreamingChatCompletionResponseBody {
     pub object: ChatCompletionObjectLabel,
     pub model: String,

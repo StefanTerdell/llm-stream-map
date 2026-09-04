@@ -9,7 +9,7 @@ use crate::chat_completion::models::api::request::{
     non_streaming::NonStreamingChatCompletionRequestBody,
 };
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct StreamingChatCompletionRequestBody {
     pub stream: True,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -33,7 +33,7 @@ impl From<StreamingChatCompletionRequestBody> for ChatCompletionRequestBody {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct StreamingChatCompletionRequestBodyStreamOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub include_usage: Option<bool>,
